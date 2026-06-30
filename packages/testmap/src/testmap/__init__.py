@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from testmap!")
+"""testmap: a feature x test-kind validation matrix for your test suite."""
