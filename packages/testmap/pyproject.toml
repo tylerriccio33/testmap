@@ -1,0 +1,15 @@
+[project]
+name = "testmap"
+version = "0.1.0"
+description = "Understand your test suite: a feature x test-kind validation matrix."
+readme = "README.md"
+authors = [{ name = "Tyler Riccio", email = "tylerriccio8@gmail.com" }]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+testmap = "testmap:main"
+
+[build-system]
+requires = ["uv_build>=0.11.18,<0.12.0"]
+build-backend = "uv_build"

@@ -5,5 +5,5 @@ lint: ## Run linters
 
 test: ## Run tests
 	@uv run pytest \
-		--cov src \
+		--cov=testmap --cov=pytest_testmap \
 		--cov-report term-missing
