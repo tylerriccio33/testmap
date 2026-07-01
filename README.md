@@ -1,33 +1,103 @@
 # testmap
 
+[![PyPI - Version](https://img.shields.io/pypi/v/testmap.svg)](https://pypi.org/project/testmap/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/testmap.svg)](https://pypi.org/project/testmap/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+
+A **feature × test-kind validation matrix** for your test suite.
+
+<p align="center">
+  <img alt="Running pytest --testmap to render the feature x kind matrix." src="assets/testmap-demo.gif">
+</p>
+
+<p align="center"><i>Running <code>pytest --testmap</code> on a project tagged with <code>@testmap</code>.</i></p>
+
 testmap answers a question code-coverage tools can't: **what validation evidence
-do we have?** For each *feature* of your codebase it builds a matrix of how many
-*unit / integration / property / perf* tests exist, and flags the required kinds
-that are missing — useful for humans and for agents ("generate property tests for
-`processor`").
+do we have?** Coverage tells you which *lines* ran. testmap tells you which *kinds*
+of test back each *feature* — and flags the required kinds that are missing.
 
 ```
-Feature      Unit  Integration  Property  Perf
-----------------------------------------------
-processor      12       4           0      ✗
-sender          8       0           0      ✗
-parser         19       7           5      ✓
+Feature    Unit  Integration  Property  Perf  Status
+----------------------------------------------------
+parser        1            1         1     0       ✓
+processor     1            1         0     0       ✗
+sender        1            0         0     0       ✗
 
 Missing:
-  • sender: integration
   • processor: property
+  • sender: integration
 ```
 
-## Packages
+That output is useful for humans reviewing a PR — and for agents
+("generate property tests for `processor`").
 
-This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
-monorepo with two distributions:
+## Highlights
 
-- **`testmap`** (`packages/testmap`) — standalone core + CLI. Ingests test
-  metadata and renders the matrix / missing report.
-- **`pytest-testmap`** (`packages/pytest-testmap`) — pytest plugin. Provides the
-  `@testmap(feature=..., kind=...)` decorator and the `--testmap` /
-  `--testmap-json` options.
+- 📊 A **matrix**, not a percentage — features down the side, test kinds across the top.
+- 🧩 **Pluggable taxonomy** — define your own kinds (`unit`, `integration`, `property`, `perf`, …).
+- ✅ **Per-feature requirements** — set a global default, override it per feature.
+- 🐍 **A pytest plugin** that tags tests with a `@testmap` decorator and collects them at zero runtime cost.
+- 📦 **A standalone core + CLI** that ingests the metadata and renders the report — no pytest required to read it.
+- 🤖 **Agent-friendly JSON** — `--testmap-json` emits machine-readable records for tooling and LLMs.
+
+## Installation
+
+testmap ships as two distributions. Most users want the pytest plugin, which
+pulls in the core automatically:
+
+```bash
+pip install pytest-testmap
+# or
+uv add pytest-testmap
+```
+
+If you only need to render a report from a JSON file (e.g. in CI), install the
+standalone core on its own:
+
+```bash
+pip install testmap
+```
+
+## Usage
+
+### 1. Tag your tests
+
+Mark each test with the *feature* it exercises and the *kind* of validation it provides:
+
+```python
+from pytest_testmap import testmap
+
+@testmap(feature="processor", kind="unit")
+def test_processor_handles_empty_input():
+    ...
+
+@testmap(feature="processor", kind="integration")
+def test_processor_round_trip():
+    ...
+```
+
+### 2. Render the matrix
+
+```bash
+pytest --testmap
+```
+
+This prints the feature × kind matrix in the pytest terminal summary and flags
+any required kinds that are missing.
+
+### 3. Emit JSON for tooling
+
+```bash
+pytest --testmap-json testmap.json
+```
+
+The standalone CLI ingests that file and applies your config later — handy for
+splitting collection (in the test job) from reporting (in a separate step):
+
+```bash
+testmap report testmap.json           # rendered matrix
+testmap report testmap.json --json    # machine-readable
+```
 
 ## Configuration
 
@@ -41,6 +111,20 @@ required = ["unit", "integration"]   # global default
 [tool.testmap.features]
 processor = ["unit", "integration", "property"]   # per-feature override
 ```
+
+`required` is the global default that every feature must satisfy; entries under
+`[tool.testmap.features]` override it for a specific feature.
+
+## Packages
+
+This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+monorepo with two distributions:
+
+- **`testmap`** (`packages/testmap`) — standalone core + CLI. Ingests test
+  metadata and renders the matrix / missing report.
+- **`pytest-testmap`** (`packages/pytest-testmap`) — pytest plugin. Provides the
+  `@testmap(feature=..., kind=...)` decorator and the `--testmap` /
+  `--testmap-json` options.
 
 ## Development
 
@@ -57,3 +141,8 @@ Install the git hooks (lint, type-check, commit-message check) with
 ```bash
 prek install --hook-type pre-commit --hook-type commit-msg
 ```
+
+## License
+
+testmap is released under the MIT License.
+</content>
