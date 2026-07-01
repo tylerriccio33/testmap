@@ -1,7 +1,9 @@
 import json
+import runpy
+from pathlib import Path
 
 import pytest
-from testmap.cli import main
+from testmap.cli import _default_paths, main
 
 PYPROJECT = (
     "[tool.pytest.ini_options]\n"
@@ -35,6 +37,25 @@ def test_report_discovers_from_testpaths(project, capsys, monkeypatch) -> None:
     assert "parser" in out
     # parser has unit but not integration -> flagged as missing.
     assert "parser: integration" in out
+
+
+def test_module_entrypoint_runs_cli(project, capsys, monkeypatch) -> None:
+    # `python -m testmap` dispatches to the CLI (exercises __main__.py).
+    monkeypatch.setattr("sys.argv", ["testmap", "report"])
+    runpy.run_module("testmap", run_name="__main__")
+    assert "parser" in capsys.readouterr().out
+
+
+def test_default_paths_falls_back_to_cwd(tmp_path) -> None:
+    # No [tool.pytest.ini_options] testpaths -> scan the current directory.
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[tool.testmap]\nkinds = ["unit"]\n')
+    assert _default_paths(pyproject) == [Path(".")]
+
+
+def test_default_paths_missing_pyproject(tmp_path) -> None:
+    # A pyproject that doesn't exist also falls back to the cwd.
+    assert _default_paths(tmp_path / "nope.toml") == [Path(".")]
 
 
 def test_report_ingests_json_file(project, capsys, monkeypatch) -> None:
