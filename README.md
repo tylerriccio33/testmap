@@ -14,7 +14,7 @@ A **feature × test-kind validation matrix** for your test suite.
 
 testmap answers a question code-coverage tools can't: **what validation evidence
 do we have?** Coverage tells you which *lines* ran. testmap tells you which *kinds*
-of test back each *feature* — and flags the required kinds that are missing.
+of test back each *feature*, and flags the required kinds that are missing.
 
 ```
 Feature    Unit  Integration  Property  Perf  Status
@@ -28,17 +28,17 @@ Missing:
   • sender: integration
 ```
 
-That output is useful for humans reviewing a PR — and for agents
+That output is useful for humans reviewing a PR, and for agents
 ("generate property tests for `processor`").
 
 ## Highlights
 
-- 📊 A **matrix**, not a percentage — features down the side, test kinds across the top.
-- 🧩 **Pluggable taxonomy** — define your own kinds (`unit`, `integration`, `property`, `perf`, …).
-- ✅ **Per-feature requirements** — set a global default, override it per feature.
-- 🐍 **A pytest plugin** that tags tests with a `@testmap` decorator and collects them at zero runtime cost.
-- 📦 **A standalone core + CLI** that ingests the metadata and renders the report — no pytest required to read it.
-- 🤖 **Agent-friendly JSON** — `--testmap-json` emits machine-readable records for tooling and LLMs.
+- A **matrix**, not a percentage. Features down the side, test kinds across the top.
+- **Pluggable taxonomy.** Define your own kinds (`unit`, `integration`, `property`, `perf`, …).
+- **Per-feature requirements.** Set a global default, override it per feature.
+- **A pytest plugin** that tags tests with a `@testmap` decorator and collects them at zero runtime cost.
+- **A standalone core + CLI** that ingests the metadata and renders the report. No pytest required to read it.
+- **Agent-friendly JSON.** `--testmap-json` emits machine-readable records for tooling and LLMs.
 
 ## Installation
 
@@ -91,7 +91,7 @@ any required kinds that are missing.
 pytest --testmap-json testmap.json
 ```
 
-The standalone CLI ingests that file and applies your config later — handy for
+The standalone CLI ingests that file and applies your config later. Handy for
 splitting collection (in the test job) from reporting (in a separate step):
 
 ```bash
@@ -120,9 +120,9 @@ processor = ["unit", "integration", "property"]   # per-feature override
 This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
 monorepo with two distributions:
 
-- **`testmap`** (`packages/testmap`) — standalone core + CLI. Ingests test
+- **`testmap`** (`packages/testmap`): standalone core + CLI. Ingests test
   metadata and renders the matrix / missing report.
-- **`pytest-testmap`** (`packages/pytest-testmap`) — pytest plugin. Provides the
+- **`pytest-testmap`** (`packages/pytest-testmap`): pytest plugin. Provides the
   `@testmap(feature=..., kind=...)` decorator and the `--testmap` /
   `--testmap-json` options.
 
