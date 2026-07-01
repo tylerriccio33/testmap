@@ -5,6 +5,7 @@ CONFIG = Config(
     kinds=["unit", "integration", "property", "perf"],
     required=["unit", "integration"],
     features={"processor": ["unit", "integration", "property"]},
+    excludes={},
     statuses={"complete": "✓", "incomplete": "✗"},
 )
 
@@ -87,5 +88,46 @@ def test_load_config_rejects_unknown_status(tmp_path) -> None:
 def test_load_config_rejects_unknown_required_kind(tmp_path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[tool.testmap]\nkinds = ["unit"]\nrequired = ["unit", "perf"]\n')
+    with pytest.raises(ValueError, match="unknown kinds"):
+        load_config(pyproject)
+
+
+def test_load_config_feature_exclude(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.testmap]\nkinds = ["unit", "integration", "perf"]\n'
+        'required = ["unit", "integration", "perf"]\n'
+        '[tool.testmap.features]\nauth = { exclude = ["perf"] }\n'
+    )
+    config = load_config(pyproject)
+    # perf is dropped from auth's requirements; other features keep it.
+    assert config.required_for("auth") == ["unit", "integration"]
+    assert config.excluded_for("auth") == ["perf"]
+    assert config.required_for("other") == ["unit", "integration", "perf"]
+
+
+def test_exclude_makes_feature_complete_and_renders_na() -> None:
+    config = Config(
+        kinds=["unit", "integration", "perf"],
+        required=["unit", "integration", "perf"],
+        features={},
+        excludes={"auth": ["perf"]},
+        statuses={"complete": "✓", "incomplete": "✗"},
+    )
+    tests = [{"feature": "auth", "kind": "unit"}, {"feature": "auth", "kind": "integration"}]
+    report = build_report(tests, config)
+    # No perf test, but perf is excluded, so auth is complete with nothing missing.
+    assert report["features"]["auth"]["complete"] is True
+    assert report["features"]["auth"]["missing"] == []
+    out = render(report, config)
+    assert "n/a" in out
+    assert "Missing:" not in out
+
+
+def test_load_config_rejects_unknown_excluded_kind(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.testmap]\nkinds = ["unit"]\n[tool.testmap.features]\nauth = { exclude = ["perf"] }\n'
+    )
     with pytest.raises(ValueError, match="unknown kinds"):
         load_config(pyproject)
