@@ -110,6 +110,7 @@ required = ["unit", "integration"]   # global default
 
 [tool.testmap.features]
 processor = ["unit", "integration", "property"]   # per-feature override
+docs = { exclude = ["perf"] }                     # opt a feature out of a kind
 
 [tool.testmap.statuses]
 complete = "✓"     # Status column symbol when a feature has every required kind
@@ -117,7 +118,9 @@ incomplete = "✗"   # ...and when it's missing one
 ```
 
 `required` is the global default that every feature must satisfy; entries under
-`[tool.testmap.features]` override it for a specific feature.
+`[tool.testmap.features]` override it for a specific feature. An entry can be a
+list of required kinds, or a table with `exclude` to drop kinds a feature
+doesn't need — those show as `n/a` in the matrix and never count as missing.
 
 The `[tool.testmap.statuses]` symbols shown in the Status column default to
 `✓` / `✗`; override either independently (the table is optional).
