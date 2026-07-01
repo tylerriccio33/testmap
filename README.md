@@ -85,18 +85,38 @@ pytest --testmap
 This prints the feature × kind matrix in the pytest terminal summary and flags
 any required kinds that are missing.
 
-### 3. Emit JSON for tooling
+### 3. Report without running the suite
+
+Add `--testmap-only` to render the matrix from collected metadata without
+executing a single test:
 
 ```bash
-pytest --testmap-json testmap.json
+pytest --testmap-only
 ```
 
-The standalone CLI ingests that file and applies your config later. Handy for
-splitting collection (in the test job) from reporting (in a separate step):
+<p align="center">
+  <img alt="Running pytest --testmap-only to render the matrix without running tests." src="assets/testmap-only-demo.gif">
+</p>
+
+### 4. Report without pytest at all
+
+The standalone `testmap` core can discover `@testmap`-tagged tests by scanning
+your source directly, so a report needs neither pytest nor a pre-generated file:
 
 ```bash
-testmap report testmap.json           # rendered matrix
-testmap report testmap.json --json    # machine-readable
+uvx testmap report          # scans testpaths from pyproject.toml
+uvx testmap report src/     # or point it at a directory
+testmap report --json       # machine-readable
+```
+
+### 5. Emit JSON for tooling
+
+To split collection (in the test job) from reporting (in a separate step),
+have the plugin write the raw records and feed the file to the CLI later:
+
+```bash
+pytest --testmap-json testmap.json    # collect
+testmap report testmap.json           # render that file
 ```
 
 ## Configuration

@@ -39,6 +39,23 @@ def test_matrix_and_json(pytester) -> None:
     }
 
 
+def test_testmap_only_renders_without_running(pytester) -> None:
+    pytester.makepyfile(
+        """
+        from pytest_testmap import testmap
+
+        @testmap(feature="parser", kind="unit")
+        def test_a(): pass
+        """
+    )
+    (pytester.path / "pyproject.toml").write_text(PYPROJECT)
+
+    result = pytester.runpytest("--testmap-only")
+    # No tests execute, but the matrix still renders.
+    result.assert_outcomes()
+    result.stdout.fnmatch_lines(["*testmap*", "*parser*"])
+
+
 def test_marker_without_feature_or_kind_errors(pytester) -> None:
     pytester.makepyfile(
         """
