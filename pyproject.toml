@@ -18,6 +18,12 @@ dev = [
 kinds = ["unit", "integration", "property", "perf"]
 required = ["unit", "integration"]
 
+# Symbols shown in the Status column. Both default (✓ / ✗) if this table is
+# omitted; override either independently.
+[tool.testmap.statuses]
+complete = "✓"
+incomplete = "✗"
+
 [tool.testmap.features]
 processor = ["unit", "integration", "property"]
 

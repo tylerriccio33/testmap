@@ -110,10 +110,17 @@ required = ["unit", "integration"]   # global default
 
 [tool.testmap.features]
 processor = ["unit", "integration", "property"]   # per-feature override
+
+[tool.testmap.statuses]
+complete = "✓"     # Status column symbol when a feature has every required kind
+incomplete = "✗"   # ...and when it's missing one
 ```
 
 `required` is the global default that every feature must satisfy; entries under
 `[tool.testmap.features]` override it for a specific feature.
+
+The `[tool.testmap.statuses]` symbols shown in the Status column default to
+`✓` / `✗`; override either independently (the table is optional).
 
 ## Packages
 

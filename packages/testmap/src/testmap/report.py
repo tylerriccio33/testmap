@@ -8,6 +8,10 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+# The Status column symbols, used when [tool.testmap.statuses] is absent. At
+# least one of each state so the table renders without any config.
+DEFAULT_STATUSES = {"complete": "✓", "incomplete": "✗"}
+
 
 @dataclass(frozen=True)
 class Config:
@@ -16,9 +20,13 @@ class Config:
     kinds: list[str]
     required: list[str]  # global default required kinds
     features: dict[str, list[str]]  # per-feature required-kind overrides
+    statuses: dict[str, str]  # Status-column symbol per state (complete/incomplete)
 
     def required_for(self, feature: str) -> list[str]:
         return self.features.get(feature, self.required)
+
+    def status_symbol(self, complete: bool) -> str:
+        return self.statuses["complete" if complete else "incomplete"]
 
 
 def load_config(pyproject: Path) -> Config:
@@ -38,7 +46,16 @@ def load_config(pyproject: Path) -> Config:
         unknown = sorted(set(req) - set(kinds))
         if unknown:
             raise ValueError(f"[tool.testmap] {name} references unknown kinds {unknown}")
-    return Config(kinds=kinds, required=required, features=features)
+    # Merge configured status symbols over the defaults so a partial table (e.g.
+    # only overriding "complete") keeps a symbol for the other state.
+    statuses = {**DEFAULT_STATUSES, **data.get("statuses", {})}
+    unknown_states = sorted(set(statuses) - set(DEFAULT_STATUSES))
+    if unknown_states:
+        raise ValueError(
+            f"[tool.testmap.statuses] unknown states {unknown_states} "
+            f"(valid: {sorted(DEFAULT_STATUSES)})"
+        )
+    return Config(kinds=kinds, required=required, features=features, statuses=statuses)
 
 
 def build_report(tests: list[dict[str, str]], config: Config) -> dict:
@@ -68,7 +85,7 @@ def render(report: dict, config: Config) -> str:
     headers = ["Feature", *(k.capitalize() for k in config.kinds), "Status"]
     rows = [headers]
     for feature, data in report["features"].items():
-        status = "✓" if data["complete"] else "✗"
+        status = config.status_symbol(data["complete"])
         rows.append([feature, *(str(data["counts"][k]) for k in config.kinds), status])
 
     widths = [max(len(row[i]) for row in rows) for i in range(len(headers))]

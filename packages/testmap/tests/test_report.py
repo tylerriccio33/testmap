@@ -5,6 +5,7 @@ CONFIG = Config(
     kinds=["unit", "integration", "property", "perf"],
     required=["unit", "integration"],
     features={"processor": ["unit", "integration", "property"]},
+    statuses={"complete": "✓", "incomplete": "✗"},
 )
 
 TESTS = [
@@ -51,6 +52,36 @@ def test_load_config(tmp_path) -> None:
     # required defaults to kinds when unspecified.
     assert config.required == ["unit", "integration"]
     assert config.required_for("sender") == ["unit"]
+    # statuses default when unspecified.
+    assert config.statuses == {"complete": "✓", "incomplete": "✗"}
+
+
+def test_load_config_custom_statuses(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.testmap]\nkinds = ["unit"]\n'
+        '[tool.testmap.statuses]\ncomplete = "PASS"\nincomplete = "TODO"\n'
+    )
+    config = load_config(pyproject)
+    assert config.statuses == {"complete": "PASS", "incomplete": "TODO"}
+    out = render(build_report([{"feature": "a", "kind": "unit"}], config), config)
+    assert "PASS" in out and "TODO" not in out
+
+
+def test_load_config_partial_statuses_keeps_default(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.testmap]\nkinds = ["unit"]\n[tool.testmap.statuses]\nincomplete = "!"\n'
+    )
+    config = load_config(pyproject)
+    assert config.statuses == {"complete": "✓", "incomplete": "!"}
+
+
+def test_load_config_rejects_unknown_status(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[tool.testmap]\nkinds = ["unit"]\n[tool.testmap.statuses]\nflaky = "?"\n')
+    with pytest.raises(ValueError, match="unknown states"):
+        load_config(pyproject)
 
 
 def test_load_config_rejects_unknown_required_kind(tmp_path) -> None:
