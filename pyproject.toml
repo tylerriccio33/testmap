@@ -24,8 +24,11 @@ required = ["unit", "integration"]
 complete = "✓"
 incomplete = "✗"
 
+# A feature entry is either a list of required kinds, or a table with `exclude`
+# to drop kinds a feature doesn't need (shown as n/a, never counted as missing).
 [tool.testmap.features]
 processor = ["unit", "integration", "property"]
+docs = { exclude = ["perf"] }
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]
