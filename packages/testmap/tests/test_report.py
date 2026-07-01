@@ -124,6 +124,28 @@ def test_exclude_makes_feature_complete_and_renders_na() -> None:
     assert "Missing:" not in out
 
 
+def test_load_config_missing_testmap_table(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.other]\nfoo = 1\n")
+    with pytest.raises(ValueError, match="no \\[tool.testmap\\] configuration"):
+        load_config(pyproject)
+
+
+def test_load_config_feature_table_with_required(tmp_path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.testmap]\nkinds = ["unit", "integration", "perf"]\n'
+        'required = ["unit"]\n'
+        "[tool.testmap.features]\n"
+        'auth = { required = ["unit", "integration"], exclude = ["integration"] }\n'
+    )
+    config = load_config(pyproject)
+    # The table's `required` overrides the global default...
+    assert config.features["auth"] == ["unit", "integration"]
+    # ...and `exclude` still drops kinds from the effective requirements.
+    assert config.required_for("auth") == ["unit"]
+
+
 def test_load_config_rejects_unknown_excluded_kind(tmp_path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
