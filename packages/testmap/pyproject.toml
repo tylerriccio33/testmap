@@ -1,6 +1,6 @@
 [project]
 name = "testmap"
-version = "0.1.0"
+version = "0.2.0"
 description = "Understand your test suite: a feature x test-kind validation matrix."
 readme = "README.md"
 authors = [{ name = "Tyler Riccio", email = "tylerriccio8@gmail.com" }]
