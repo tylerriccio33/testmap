@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "packages": {
+    "packages/testmap": {
+      "release-type": "python",
+      "package-name": "testmap",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md"
+    },
+    "packages/pytest-testmap": {
+      "release-type": "python",
+      "package-name": "pytest-testmap",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

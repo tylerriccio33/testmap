@@ -1,0 +1,74 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Maintains a release PR per package off main. Merging a release PR bumps that
+  # package's version in its pyproject.toml, updates its CHANGELOG.md, tags
+  # <package>-vX.Y.Z, and publishes a GitHub Release.
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      # JSON array of the package paths that were released in this run, e.g.
+      # ["packages/testmap"]. Empty when no release PR was merged.
+      paths_released: ${{ steps.release.outputs.paths_released }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Fan out over exactly the packages that just released. Because both packages
+  # are pure Python, each build is a simple `uv build` producing an sdist + a
+  # universal wheel — no per-platform wheel matrix needed.
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.paths_released != '[]' && needs.release-please.outputs.paths_released != '' }}
+    runs-on: ubuntu-latest
+    # Trusted Publishing lives in this top-level workflow (not a reusable one):
+    # OIDC fails with `invalid-publisher` from inside a `workflow_call` workflow.
+    # Configure each PyPI project's trusted publisher with workflow file
+    # `release-please.yml` and environment `pypi`.
+    environment: pypi
+    permissions:
+      id-token: write # OIDC Trusted Publishing
+      contents: read
+      attestations: write # build provenance
+    strategy:
+      fail-fast: false
+      # publish the workspace-internal dependency (testmap) before its dependents.
+      max-parallel: 1
+      matrix:
+        path: ${{ fromJSON(needs.release-please.outputs.paths_released) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Derive package name from path
+        id: pkg
+        run: echo "name=$(basename '${{ matrix.path }}')" >> "$GITHUB_OUTPUT"
+
+      - name: Build sdist + wheel
+        run: uv build --package "${{ steps.pkg.outputs.name }}" --out-dir dist
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
