@@ -16,9 +16,11 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      # JSON array of the package paths that were released in this run, e.g.
-      # ["packages/testmap"]. Empty when no release PR was merged.
-      paths_released: ${{ steps.release.outputs.paths_released }}
+      # A matrix `include` array — one entry per package that released this run,
+      # each carrying the uv package name and its dedicated GitHub environment.
+      # Empty `include` when no release PR was merged, which skips `publish`.
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      any_released: ${{ steps.matrix.outputs.any }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -26,18 +28,31 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      # Turn paths_released (e.g. ["packages/testmap"]) into publish-matrix entries.
+      # Each package gets its own environment `pypi-<name>` so their PyPI trusted
+      # publishers have distinct configs (PyPI requires pending publishers to be
+      # unique on repo + workflow + environment).
+      - name: Build publish matrix
+        id: matrix
+        env:
+          PATHS: ${{ steps.release.outputs.paths_released }}
+        run: |
+          include=$(echo "${PATHS:-[]}" | jq -c '[.[] | (. | sub(".*/"; "")) as $n | {name: $n, environment: ("pypi-" + $n)}]')
+          echo "matrix={\"include\":$include}" >> "$GITHUB_OUTPUT"
+          [ "$(echo "$include" | jq 'length')" -gt 0 ] && echo "any=true" >> "$GITHUB_OUTPUT" || echo "any=false" >> "$GITHUB_OUTPUT"
+
   # Fan out over exactly the packages that just released. Because both packages
   # are pure Python, each build is a simple `uv build` producing an sdist + a
   # universal wheel — no per-platform wheel matrix needed.
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.paths_released != '[]' && needs.release-please.outputs.paths_released != '' }}
+    if: ${{ needs.release-please.outputs.any_released == 'true' }}
     runs-on: ubuntu-latest
     # Trusted Publishing lives in this top-level workflow (not a reusable one):
     # OIDC fails with `invalid-publisher` from inside a `workflow_call` workflow.
     # Configure each PyPI project's trusted publisher with workflow file
-    # `release-please.yml` and environment `pypi`.
-    environment: pypi
+    # `release-please.yml` and environment `pypi-<package-name>`.
+    environment: ${{ matrix.environment }}
     permissions:
       id-token: write # OIDC Trusted Publishing
       contents: read
@@ -46,8 +61,7 @@ jobs:
       fail-fast: false
       # publish the workspace-internal dependency (testmap) before its dependents.
       max-parallel: 1
-      matrix:
-        path: ${{ fromJSON(needs.release-please.outputs.paths_released) }}
+      matrix: ${{ fromJSON(needs.release-please.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,12 +70,8 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Derive package name from path
-        id: pkg
-        run: echo "name=$(basename '${{ matrix.path }}')" >> "$GITHUB_OUTPUT"
-
       - name: Build sdist + wheel
-        run: uv build --package "${{ steps.pkg.outputs.name }}" --out-dir dist
+        run: uv build --package "${{ matrix.name }}" --out-dir dist
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
