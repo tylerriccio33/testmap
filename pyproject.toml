@@ -32,6 +32,11 @@ docs = { exclude = ["perf"] }
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]
+# The pytest-testmap plugin imports the `testmap` package at startup — before
+# pytest-cov begins measuring — which leaves those modules marked "not measured"
+# and undercounts coverage. Disable its autoload here; the plugin's own tests
+# load it via `pytester` (after coverage has started), so nothing is lost.
+addopts = "-p no:testmap"
 
 [tool.ruff]
 target-version = "py314"
